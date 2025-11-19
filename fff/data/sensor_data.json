@@ -1,0 +1,37 @@
+[
+  {
+    "temperature": 25.3,
+    "humidity": 78.9,
+    "light": 14.8,
+    "co2": 680.0,
+    "timestamp": "2025-11-19T12:58:09.086656"
+  },
+  {
+    "temperature": 25.4,
+    "humidity": 70.8,
+    "light": 12.3,
+    "co2": 531.0,
+    "timestamp": "2025-11-19T12:58:14.097585"
+  },
+  {
+    "temperature": 26.3,
+    "humidity": 76.9,
+    "light": 13.0,
+    "co2": 702.0,
+    "timestamp": "2025-11-19T12:58:19.109596"
+  },
+  {
+    "temperature": 23.5,
+    "humidity": 74.9,
+    "light": 16.4,
+    "co2": 616.0,
+    "timestamp": "2025-11-19T12:58:24.124959"
+  },
+  {
+    "temperature": 25.3,
+    "humidity": 71.8,
+    "light": 16.0,
+    "co2": 667.0,
+    "timestamp": "2025-11-19T12:58:29.126301"
+  }
+]

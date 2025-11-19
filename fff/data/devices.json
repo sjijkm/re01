@@ -1,0 +1,32 @@
+[
+  {
+    "name": "通风扇",
+    "status": true,
+    "description": "调节大棚内空气流通",
+    "last_changed": "2025-11-19T12:58:24.042605"
+  },
+  {
+    "name": "灌溉系统",
+    "status": false,
+    "description": "自动浇水系统",
+    "last_changed": "2025-11-19T12:58:29.115461"
+  },
+  {
+    "name": "补光灯",
+    "status": false,
+    "description": "补充光照",
+    "last_changed": "2025-11-19T12:58:08.925801"
+  },
+  {
+    "name": "加热系统",
+    "status": false,
+    "description": "低温时加热",
+    "last_changed": "2025-11-19T12:58:08.925801"
+  },
+  {
+    "name": "遮阳网",
+    "status": false,
+    "description": "强光时遮阳",
+    "last_changed": "2025-11-19T12:58:08.925801"
+  }
+]

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报警信息 - 温室控制系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>温室智能控制系统</h1>
+        <div class="user-info">
+            <span>当前用户: {{ username }} ({{ role }})</span>
+            <a href="{{ url_for('logout') }}">退出登录</a>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('index') }}">首页</a></li>
+            <li><a href="{{ url_for('status') }}">系统状态</a></li>
+            <li><a href="{{ url_for('device_control') }}">设备控制</a></li>
+            <li><a href="{{ url_for('greenhouses') }}">大棚管理</a></li>
+            <li><a href="{{ url_for('history') }}">历史数据</a></li>
+            <li><a href="{{ url_for('alerts') }}" class="active">报警信息</a></li>
+            <li><a href="{{ url_for('schedule') }}">定时任务</a></li>
+            <li><a href="{{ url_for('calibration') }}">传感器校准</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h2>报警信息管理</h2>
+
+        <div class="card">
+            <h3>报警筛选</h3>
+            <div>
+                <a href="{{ url_for('alerts') }}?status=all" class="btn {% if current_status == 'all' %}btn-success{% endif %}">
+                    所有报警
+                </a>
+                <a href="{{ url_for('alerts') }}?status=unhandled" class="btn {% if current_status == 'unhandled' %}btn-success{% endif %}">
+                    未处理报警
+                </a>
+                <a href="{{ url_for('alerts') }}?status=handled" class="btn {% if current_status == 'handled' %}btn-success{% endif %}">
+                    已处理报警
+                </a>
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            {% for alert in alerts %}
+                <div class="alert-item" id="alert-{{ alert.id }}">
+                    <h4>报警 #{{ alert.id }} - {{ alert.param.replace('_', ' ') }}</h4>
+                    <p><strong>数值:</strong> {{ alert.value }}</p>
+                    <p><strong>信息:</strong> {{ alert.message }}</p>
+                    <p><strong>时间:</strong> {{ alert.created_at }}</p>
+                    <p><strong>状态:</strong> {{ '未处理' if alert.status == 'unhandled' else '已处理' }}</p>
+
+                    {% if alert.status == 'handled' and alert.handler %}
+                        <p><strong>处理人:</strong> {{ alert.handler }}</p>
+                        <p><strong>处理时间:</strong> {{ alert.handled_at }}</p>
+                    {% endif %}
+
+                    {% if alert.status == 'unhandled' and role == 'admin' %}
+                        <button onclick="handleAlert({{ alert.id }})" class="btn btn-danger handle-btn">
+                            标记为已处理
+                        </button>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="card">
+                    <p>暂无报警信息</p>
+                </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 温室智能控制系统 | 软件工程毕业设计</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

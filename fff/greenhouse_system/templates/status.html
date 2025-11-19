@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统状态 - 温室智能控制系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>温室智能控制系统</h1>
+        <div class="user-info">
+            <span>当前用户: {{ username }} ({{ role }})</span>
+            <a href="{{ url_for('logout') }}">退出登录</a>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('index') }}">首页</a></li>
+            <li><a href="{{ url_for('status') }}" class="active">系统状态</a></li>
+            <li><a href="{{ url_for('device_control') }}">设备控制</a></li>
+            <li><a href="{{ url_for('greenhouses') }}">大棚管理</a></li>
+            <li><a href="{{ url_for('history') }}">历史数据</a></li>
+            <li><a href="{{ url_for('alerts') }}">报警信息</a></li>
+            <li><a href="{{ url_for('schedule') }}">定时任务</a></li>
+            <li><a href="{{ url_for('calibration') }}">传感器校准</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h2>系统状态监控</h2>
+
+        <!-- 系统基本状态 -->
+        <div class="card">
+            <h3>系统信息</h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span>当前时间：</span>
+                    <span id="currentTime"></span>
+                </div>
+                <div class="status-item">
+                    <span>控制模式：</span>
+                    <span id="currentMode" class="mode-badge">{{ '自动' if auto_mode else '手动' }}</span>
+                </div>
+                <div class="status-item">
+                    <span>数据更新间隔：</span>
+                    <span>{{ config.UPDATE_INTERVAL }}秒</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 环境参数实时数据 -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>环境参数实时数据</h3>
+            {% if latest_data %}
+            <div class="env-grid">
+                <div class="env-item">
+                    <h4>温度</h4>
+                    <p class="env-value">{{ latest_data.temperature }} °C</p>
+                    <p class="env-range">阈值：{{ thresholds.temp_min }} - {{ thresholds.temp_max }} °C</p>
+                </div>
+                <div class="env-item">
+                    <h4>湿度</h4>
+                    <p class="env-value">{{ latest_data.humidity }} %</p>
+                    <p class="env-range">阈值：{{ thresholds.humidity_min }} - {{ thresholds.humidity_max }} %</p>
+                </div>
+                <div class="env-item">
+                    <h4>光照强度</h4>
+                    <p class="env-value">{{ latest_data.light_intensity }} lux</p>
+                    <p class="env-range">阈值：{{ thresholds.light_min }} - {{ thresholds.light_max }} lux</p>
+                </div>
+                <div class="env-item">
+                    <h4>CO2浓度</h4>
+                    <p class="env-value">{{ latest_data.co2_level }} ppm</p>
+                    <p class="env-range">阈值：{{ thresholds.co2_min }} - {{ thresholds.co2_max }} ppm</p>
+                </div>
+            </div>
+            {% else %}
+            <p class="no-data">暂无环境数据</p>
+            {% endif %}
+        </div>
+
+        <!-- 设备状态列表 -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>设备运行状态</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>设备名称</th>
+                        <th>当前状态</th>
+                        <th>最后更新时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    <tr>
+                        <td>{{ device.device_name.replace('_', ' ') }}</td>
+                        <td><span class="status-{{ device.status|lower }}">{{ device.status }}</span></td>
+                        <td>{{ device.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 趋势图表 -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>环境参数趋势（近1小时）</h3>
+            <div class="chart-container">
+                <canvas id="envTrendChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 温室智能控制系统</p>
+    </footer>
+
+    <script>
+        // 实时更新时间
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent =
+                now.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 定时刷新控制模式（每10秒）
+        function refreshModeStatus() {
+            fetch('/api/get-mode-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('currentMode').textContent =
+                            data.auto_mode ? '自动' : '手动';
+                    }
+                })
+                .catch(err => console.log('刷新模式失败:', err));
+        }
+        setInterval(refreshModeStatus, 10000);  // 每10秒刷新一次
+
+        // 绘制环境参数趋势图
+        const ctx = document.getElementById('envTrendChart').getContext('2d');
+        // 这里可以添加图表绘制逻辑（使用最新数据）
+    </script>
+</body>
+</html>

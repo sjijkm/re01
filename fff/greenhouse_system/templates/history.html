@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史数据 - 温室控制系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>温室智能控制系统</h1>
+        <div class="user-info">
+            <span>当前用户: {{ username }} ({{ role }})</span>
+            <a href="{{ url_for('logout') }}">退出登录</a>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('index') }}">首页</a></li>
+            <li><a href="{{ url_for('status') }}">系统状态</a></li>
+            <li><a href="{{ url_for('device_control') }}">设备控制</a></li>
+            <li><a href="{{ url_for('history') }}" class="active">历史数据</a></li>
+            <li><a href="{{ url_for('alerts') }}">报警信息</a></li>
+            <li><a href="{{ url_for('schedule') }}">定时任务</a></li>
+            
+        </ul>
+    </nav>
+
+    <main>
+        <h2>历史数据查询</h2>
+
+        <div class="card">
+            <h3>查询设置</h3>
+            <form method="get">
+                <div class="form-group">
+                    <label for="hours">查询最近小时数:</label>
+                    <select id="hours" name="hours" class="form-control" onchange="this.form.submit()">
+                        <option value="1" {% if hours == 1 %}selected{% endif %}>1小时</option>
+                        <option value="24" {% if hours == 24 %}selected{% endif %}>24小时</option>
+                        <option value="72" {% if hours == 72 %}selected{% endif %}>3天</option>
+                        <option value="168" {% if hours == 168 %}selected{% endif %}>7天</option>
+                    </select>
+                </div>
+
+                <!-- 数据导出按钮 -->
+                <div class="form-group" style="margin-top: 1rem;">
+                    <a href="{{ url_for('export_data', hours=hours) }}" class="btn btn-success">
+                        导出当前数据为Excel
+                    </a>
+                    <p class="text-muted" style="margin-top: 5px;">
+                        提示：数据量过大时将自动导出为CSV格式（速度更快），最多支持导出7天数据
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="environmentChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h3>详细数据列表</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>温度(°C)</th>
+                        <th>湿度(%)</th>
+                        <th>光照(lux)</th>
+                        <th>CO2(ppm)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in data %}
+                        <tr>
+                            <td>{{ item.timestamp }}</td>
+                            <td>{{ item.temperature }}</td>
+                            <td>{{ item.humidity }}</td>
+                            <td>{{ item.light_intensity }}</td>
+                            <td>{{ item.co2_level }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center;">暂无数据</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 温室智能控制系统 | 软件工程毕业设计</p>
+    </footer>
+
+    <script>
+        // 绘制环境参数趋势图
+        const ctx = document.getElementById('environmentChart').getContext('2d');
+        const data = {{ data|tojson }};
+
+        // 准备图表数据
+        const labels = data.map(item => item.timestamp);
+        const temperatures = data.map(item => item.temperature);
+        const humidities = data.map(item => item.humidity);
+        const lightIntensities = data.map(item => item.light_intensity);
+        const co2Levels = data.map(item => item.co2_level);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '温度(°C)',
+                        data: temperatures,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '湿度(%)',
+                        data: humidities,
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: '光照(lux)',
+                        data: lightIntensities,
+                        borderColor: 'rgb(255, 206, 86)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                        yAxisID: 'y2'
+                    },
+                    {
+                        label: 'CO2(ppm)',
+                        data: co2Levels,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        yAxisID: 'y3'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '温度(°C)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '湿度(%)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: false,
+                        title: {
+                            display: true,
+                            text: '光照(lux)'
+                        }
+                    },
+                    y3: {
+                        type: 'linear',
+                        display: false,
+                        title: {
+                            display: true,
+                            text: 'CO2(ppm)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>温室控制系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>温室智能控制系统</h1>
+        <div class="user-info">
+            <span>当前用户: {{ username }} ({{ role }})</span>
+            <a href="{{ url_for('logout') }}">退出登录</a>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('index') }}" class="active">首页</a></li>
+            <li><a href="{{ url_for('status') }}">系统状态</a></li>
+            <li><a href="{{ url_for('device_control') }}">设备控制</a></li>
+            <li><a href="{{ url_for('greenhouses') }}">大棚管理</a></li>
+            <li><a href="{{ url_for('history') }}">历史数据</a></li>
+            <li><a href="{{ url_for('alerts') }}">报警信息</a></li>
+            <li><a href="{{ url_for('schedule') }}">定时任务</a></li>
+            
+        </ul>
+    </nav>
+
+    <main>
+        <section class="dashboard">
+            <h2>系统概览</h2>
+
+            <div class="status-cards">
+                <div class="card">
+                    <h3>当前状态</h3>
+                    <div id="current-status">
+                        <p>加载中...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>设备状态</h3>
+                    <div id="device-status">
+                        <p>加载中...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>报警信息</h3>
+                    <div id="alert-summary">
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard" style="margin-top: 2rem;">
+            <h2>大棚数量管理</h2>
+            <div class="greenhouse-management">
+                <div class="card greenhouse-form-card">
+                    <h3>新增大棚</h3>
+                    {% if role == 'admin' %}
+                    <form id="createGreenhouseForm">
+                        <div class="form-group">
+                            <label>大棚名称</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>编号</label>
+                            <input type="text" name="code" class="form-control" placeholder="可选">
+                        </div>
+                        <div class="form-group">
+                            <label>用途</label>
+                            <input type="text" name="purpose" class="form-control" placeholder="蔬菜/育苗/实验...">
+                        </div>
+                        <div class="form-group dual">
+                            <div>
+                                <label>面积 (㎡)</label>
+                                <input type="number" min="0" step="0.1" name="area" class="form-control" required>
+                            </div>
+                            <div>
+                                <label>位置</label>
+                                <input type="text" name="location" class="form-control" required>
+                            </div>
+                        </div>
+                        <button class="btn btn-success" type="submit">添加大棚</button>
+                    </form>
+                    {% else %}
+                    <p>仅管理员可以新增大棚。</p>
+                    {% endif %}
+                    <div class="stat-inline">
+                        <div>
+                            <p class="stat-label">总大棚数</p>
+                            <p class="stat-value">{{ greenhouse_total }}</p>
+                        </div>
+                        <div>
+                            <p class="stat-label">总面积</p>
+                            <p class="stat-value">{{ '%.1f'|format(greenhouse_area) }} ㎡</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card greenhouse-list-card">
+                    <h3>现有大棚</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>编号</th>
+                                <th>面积(㎡)</th>
+                                <th>位置</th>
+                                <th>用途</th>
+                                <th>状态</th>
+                                {% if role == 'admin' %}
+                                <th>操作</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="greenhouseTableBody">
+                            {% for house in houses %}
+                            <tr data-house='{{ house|tojson }}'>
+                                <td><a href="{{ url_for('greenhouse_detail', house_id=house.id) }}">{{ house.name }}</a></td>
+                                <td>{{ house.code or '-' }}</td>
+                                <td>{{ house.area }}</td>
+                                <td>{{ house.location }}</td>
+                                <td>{{ house.purpose or '未设置' }}</td>
+                                <td>
+                                    <span class="status-pill {{ 'status-on' if house.status == 'active' else 'status-off' }}">
+                                        {{ '运行中' if house.status == 'active' else '已停用' }}
+                                    </span>
+                                </td>
+                                {% if role == 'admin' %}
+                                <td>
+                                    <button class="btn btn-small" onclick="openEditModal({{ house|tojson }})">编辑</button>
+                                    <button class="btn btn-danger btn-small" onclick="deleteGreenhouse({{ house.id }})">删除</button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{{ 7 if role == 'admin' else 6 }}" style="text-align: center;">暂无大棚</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 温室智能控制系统 | 软件工程毕业设计</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // 定时更新数据
+        setInterval(updateDashboard, 5000);
+        updateDashboard();
+
+        function updateDashboard() {
+            fetch('{{ url_for('get_latest_data') }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'success') {
+                        document.getElementById('current-status').innerHTML = '<p>暂无数据</p>';
+                        return;
+                    }
+                    // 更新当前状态
+                    if (data.sensor_data) {
+                        const sd = data.sensor_data;
+                        document.getElementById('current-status').innerHTML = `
+                            <p>温度: ${sd.temperature}°C</p>
+                            <p>湿度: ${sd.humidity}%</p>
+                            <p>光照: ${sd.light_intensity} lux</p>
+                            <p>CO2: ${sd.co2_level} ppm</p>
+                            <p>更新时间: ${sd.timestamp}</p>
+                        `;
+                    }
+
+                    // 更新设备状态
+                    if (data.devices && data.devices.length > 0) {
+                        let deviceHtml = '';
+                        data.devices.forEach(device => {
+                            deviceHtml += `<p>${device.device_name}: <span class="status-${device.status.toLowerCase()}">${device.status}</span></p>`;
+                        });
+                        document.getElementById('device-status').innerHTML = deviceHtml;
+                    }
+                })
+                .catch(error => console.error('更新数据失败:', error));
+
+            // 更新报警摘要
+            fetch('{{ url_for('alerts') }}?status=unhandled')
+                .then(response => response.text())
+                .then(html => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const unhandledCount = tempDiv.querySelectorAll('.alert-item').length;
+
+                    document.getElementById('alert-summary').innerHTML = `
+                        <p>未处理报警: ${unhandledCount}</p>
+                        <a href="{{ url_for('alerts') }}?status=unhandled">查看详情</a>
+                    `;
+                });
+        }
+
+        const isAdmin = '{{ role }}' === 'admin';
+
+        if (isAdmin) {
+            const createForm = document.getElementById('createGreenhouseForm');
+            const editModal = document.getElementById('greenhouseEditModal');
+            const editForm = document.getElementById('editGreenhouseForm');
+
+            if (createForm) {
+                createForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    fetch('/api/greenhouse/add', { method: 'POST', body: formData })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                alert('添加成功');
+                                window.location.reload();
+                            } else {
+                                alert('添加失败');
+                            }
+                        });
+                });
+            }
+
+            window.openEditModal = function(house) {
+                if (!editModal || !editForm) return;
+                editModal.classList.add('visible');
+                editForm.house_id.value = house.id;
+                editForm.name.value = house.name;
+                editForm.location.value = house.location || '';
+                editForm.area.value = house.area || '';
+                editForm.code.value = house.code || '';
+                editForm.purpose.value = house.purpose || '';
+            }
+
+            window.closeEditModal = function() {
+                if (editModal) {
+                    editModal.classList.remove('visible');
+                }
+            }
+
+            window.deleteGreenhouse = function(id) {
+                if (confirm('确定要删除该大棚吗？')) {
+                    fetch(`/api/greenhouse/${id}/delete`, { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                window.location.reload();
+                            } else {
+                                alert('删除失败，可能仍有关联数据');
+                            }
+                        });
+                }
+            }
+
+            if (editForm) {
+                editForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    fetch(`/api/greenhouse/${formData.get('house_id')}/update`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                alert('更新成功');
+                                window.location.reload();
+                            } else {
+                                alert(data.message || '更新失败');
+                            }
+                        });
+                });
+            }
+        }
+    </script>
+
+    {% if role == 'admin' %}
+    <div id="greenhouseEditModal" class="modal">
+        <div class="modal-content">
+            <h3>编辑大棚</h3>
+            <form id="editGreenhouseForm">
+                <input type="hidden" name="house_id">
+                <div class="form-group">
+                    <label>大棚名称</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>编号</label>
+                    <input type="text" name="code" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>用途</label>
+                    <input type="text" name="purpose" class="form-control">
+                </div>
+                <div class="form-group dual">
+                    <div>
+                        <label>面积(㎡)</label>
+                        <input type="number" min="0" step="0.1" name="area" class="form-control" required>
+                    </div>
+                    <div>
+                        <label>位置</label>
+                        <input type="text" name="location" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-success">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>
